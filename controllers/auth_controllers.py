@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import jwt
 from flask import request, jsonify, Blueprint
+from flask_caching import Cache
 from flask_marshmallow import Marshmallow
 from marshmallow import post_load, ValidationError
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -9,10 +10,12 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import app
 from models.models import User, db
 
+cache = Cache(app)
 ma = Marshmallow(app)
 
-
 user_controller = Blueprint('user_controller', __name__)
+
+
 class UserSchema(ma.Schema):
     class Meta:
         model = User
@@ -64,6 +67,7 @@ def validate_token(func):
     return w_func
 
 
+@cache.cached(timeout=30)
 @user_controller.route("/api/user", methods=["POST"])
 def api_user_signup():
     try:
