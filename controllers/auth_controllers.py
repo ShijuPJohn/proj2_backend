@@ -7,7 +7,7 @@ from flask_marshmallow import Marshmallow
 from marshmallow import ValidationError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from Schemas.schemas import user_signup_schema, user_display_schema
+from serializers.user_serializers import user_signup_schema, user_display_schema
 from app import app
 from models.models import User, db
 
@@ -22,9 +22,8 @@ user_controller = Blueprint('user_controller', __name__)
 def api_user_signup():
     try:
         user_from_request = request.json
-        print(request.json)
+        user_from_request["role"] = "user"
         user = user_signup_schema.load(user_from_request)
-        print(user.username)
         if user:
             hashed_password = generate_password_hash(user.password, method="scrypt")
             user.password = hashed_password

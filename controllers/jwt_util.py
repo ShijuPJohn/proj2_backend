@@ -8,8 +8,9 @@ from models.models import User
 def validate_token(func):
     def w_func(*args, **kwargs):
         token = None
-        if "x-token" in request.headers:
-            token = request.headers["x-token"]
+        if "Authorization" in request.headers:
+            token = request.headers["Authorization"].split()[1]
+            print( token)
         if not token:
             return jsonify({"message": "token_absent"}), 401
         try:

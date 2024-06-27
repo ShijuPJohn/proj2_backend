@@ -5,6 +5,8 @@ from app import app
 from models.models import User
 
 ma = Marshmallow(app)
+
+
 class UserSchema(ma.Schema):
     class Meta:
         model = User
@@ -14,13 +16,13 @@ class UserSchema(ma.Schema):
 class UserDisplaySchema(ma.Schema):
     class Meta:
         model = User
-        fields = ("id", "username", "email", "imageUrl")
+        fields = ("id", "username", "email", "imageUrl", "role")
 
 
 class UserSignupSchema(ma.Schema):
     class Meta:
         model = User
-        fields = ("username", "email", "password")
+        fields = ("username", "email", "password", "role")
 
     @post_load
     def make_user(self, data, **kwargs):
