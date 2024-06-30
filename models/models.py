@@ -53,18 +53,7 @@ class EBook(db.Model):
     issues = db.relationship('Issue', backref='book')
     reviews = db.relationship('Review', backref='book')
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    section_id = db.Column(db.Integer, db.ForeignKey('sections.id'), nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('authors.id'), nullable=False)
 
-    def __init__(self, title, content, publication_year, description, cover_image, created_by_id, section_id, author_id):
-        self.title = title
-        self.content = content
-        self.publication_year = publication_year
-        self.description = description
-        self.cover_image = cover_image
-        self.created_by_id = created_by_id
-        self.section_id= section_id
-        self.author_id = author_id
 
     def __str__(self):
         return "EBook object | name: " + self.title

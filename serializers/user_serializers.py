@@ -19,6 +19,12 @@ class UserDisplaySchema(ma.Schema):
         fields = ("id", "username", "email", "imageUrl", "role")
 
 
+class UserMinimalDisplaySchema(ma.Schema):
+    class Meta:
+        model = User
+        fields = ("id", "username", "email")
+
+
 class UserSignupSchema(ma.Schema):
     class Meta:
         model = User
@@ -30,6 +36,9 @@ class UserSignupSchema(ma.Schema):
 
 
 user_schema = UserSchema()
+users_schema = UserSchema(many=True)
 user_signup_schema = UserSignupSchema()
 user_display_schema = UserDisplaySchema()
 users_display_schema = UserDisplaySchema(many=True)
+user_minimal_display_schema = UserMinimalDisplaySchema()
+users_minimal_display_schema = UserMinimalDisplaySchema(many=True)
