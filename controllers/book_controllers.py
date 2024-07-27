@@ -3,10 +3,10 @@ from flask_caching import Cache
 from flask_marshmallow import Marshmallow
 
 from app import app
-from controllers.jwt_util import validate_token
+from controllers.jwt_util import validate_token, check_role
 from models.models import db, EBook, Section, Author
 from serializers.book_serializers import section_create_schema, section_schema, author_create_schema, author_schema, \
-    ebook_create_schema, ebook_schema, ebook_minimal_display_schema
+    ebook_create_schema, ebook_schema, ebook_minimal_display_schema, sections_schema, authors_schema, ebooks_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -19,6 +19,7 @@ book_controller = Blueprint('book_controller', __name__)
 def create_section(user_from_token):
     try:
         data = request.json
+        print(data)
         data["created_by_id"] = user_from_token.id
         section_object = section_create_schema.load(data)
         db.session.add(section_object)
@@ -35,6 +36,7 @@ def create_section(user_from_token):
 def create_author(user_from_token):
     try:
         data = request.json
+        print(data)
         data["created_by_id"] = user_from_token.id
         author_object = author_create_schema.load(data)
         print("author_object", author_object)
@@ -83,6 +85,185 @@ def get_book_by_id(user_from_token, id):
             return {"message": "Book not found"}, 404
 
         return {"ebook": ebook_schema.dump(book)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/sections', methods=['GET'])
+@validate_token
+@check_role
+def get_all_sections(user_from_token):
+    try:
+        sections = Section.query.all()
+        return {"sections": sections_schema.dump(sections)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/sections/<int:id>', methods=['GET'])
+@validate_token
+def get_section_by_id(user_from_token, id):
+    try:
+        section = Section.query.get(id)
+        if not section:
+            return {"message": "Section not found"}, 404
+
+        return {"section": section_schema.dump(section)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/sections/<int:id>', methods=['PUT'])
+@validate_token
+def update_section(user_from_token, id):
+    try:
+        section = Section.query.get(id)
+        if not section:
+            return {"message": "Section not found"}, 404
+
+        data = request.json
+        section.name = data.get("name", section.name)
+        section.description = data.get("description", section.description)
+        section.image_url = data.get("image_url", section.image_url)
+        db.session.commit()
+        return {"section": section_schema.dump(section)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/sections/<int:id>', methods=['DELETE'])
+@validate_token
+def delete_section(user_from_token, id):
+    try:
+        section = Section.query.get(id)
+        if not section:
+            return {"message": "Section not found"}, 404
+
+        db.session.delete(section)
+        db.session.commit()
+        return {"message": "Section deleted"}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/authors', methods=['GET'])
+@validate_token
+@check_role
+def get_all_authors(user_from_token):
+    try:
+        authors = Author.query.all()
+        return {"authors": authors_schema.dump(authors)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/authors/<int:id>', methods=['GET'])
+@validate_token
+def get_author_by_id(user_from_token, id):
+    try:
+        author = Author.query.get(id)
+        if not author:
+            return {"message": "Author not found"}, 404
+
+        return {"author": author_schema.dump(author)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/authors/<int:id>', methods=['PUT'])
+@validate_token
+def update_author(user_from_token, id):
+    try:
+        author = Author.query.get(id)
+        if not author:
+            return {"message": "Author not found"}, 404
+
+        data = request.json
+        author.name = data.get("name", author.name)
+        db.session.commit()
+        return {"author": author_schema.dump(author)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/authors/<int:id>', methods=['DELETE'])
+@validate_token
+def delete_author(user_from_token, id):
+    try:
+        author = Author.query.get(id)
+        if not author:
+            return {"message": "Author not found"}, 404
+
+        db.session.delete(author)
+        db.session.commit()
+        return {"message": "Author deleted"}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/books', methods=['GET'])
+@validate_token
+def get_all_books(user_from_token):
+    try:
+        books = EBook.query.all()
+        return {"ebooks": ebooks_schema.dump(books)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/books/<int:id>', methods=['PUT'])
+@validate_token
+def update_book(user_from_token, id):
+    try:
+        book = EBook.query.get(id)
+        if not book:
+            return {"message": "Book not found"}, 404
+
+        data = request.json
+        book.title = data.get("title", book.title)
+        book.description = data.get("description", book.description)
+        book.cover_image = data.get("cover_image", book.cover_image)
+        book.content = data.get("content", book.content)
+        book.publication_year = data.get("publication_year", book.publication_year)
+        db.session.commit()
+        return {"ebook": ebook_schema.dump(book)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@book_controller.route('/api/books/<int:id>', methods=['DELETE'])
+@validate_token
+def delete_book(user_from_token, id):
+    try:
+        book = EBook.query.get(id)
+        if not book:
+            return {"message": "Book not found"}, 404
+
+        db.session.delete(book)
+        db.session.commit()
+        return {"message": "Book deleted"}, 200
 
     except Exception as e:
         print(e)

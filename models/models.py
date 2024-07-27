@@ -65,7 +65,6 @@ class Section(db.Model):
     name = db.Column(db.String, unique=True, nullable=False)
     date_time_created = db.Column(DateTime(timezone=True), server_default=func.now())
     description = db.Column(db.String, nullable=True)
-    image_url = db.Column(db.String, nullable=True, default="static/uploads/user_thumbs/pro_img1.png")
     books = db.relationship("EBook", secondary=section_book, backref="sections")
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 

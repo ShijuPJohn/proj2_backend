@@ -10,7 +10,6 @@ def validate_token(func):
         token = None
         if "Authorization" in request.headers:
             token = request.headers["Authorization"].split()[1]
-            print( token)
         if not token:
             return jsonify({"message": "token_absent"}), 401
         try:
@@ -23,6 +22,18 @@ def validate_token(func):
             print(e)
             return jsonify({"message": "invalid_token"}), 401
         return val
+
+    w_func.__name__ = func.__name__
+
+    return w_func
+
+
+def check_role(func):
+    def w_func(*args, **kwargs):
+        decoded_data = kwargs.get("user_from_token")
+        if not decoded_data or decoded_data.role != "librarian":
+            return jsonify({"message": "unauthorized"}), 403
+        return func(*args, **kwargs)
 
     w_func.__name__ = func.__name__
 
