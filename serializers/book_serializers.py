@@ -68,7 +68,7 @@ authors_schema = AuthorSchema(many=True)
 class AuthorMinimalSchema(ma.Schema):
     class Meta:
         model = Section
-        fields = ("id", "name", "description", "image_url", "created_by_id")
+        fields = ("id", "name",)
 
 
 author_minimal_schema = AuthorSchema()
@@ -81,8 +81,8 @@ class EBookSchema(ma.Schema):
         fields = ("title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
                   "authors")
 
-    authors = fields.Nested(author_schema)
-    sections = fields.Nested(section_minimal_display_schema)
+    authors = fields.Nested(authors_minimal_schema)
+    sections = fields.Nested(sections_minimal_display_schema)
     created_by = fields.Nested(user_display_schema)
 
 
@@ -93,7 +93,7 @@ ebooks_schema = EBookSchema(many=True)
 class EBookCreateSchema(ma.Schema):
     class Meta:
         model = EBook
-        fields = ("title", "description", "cover_image", "content", "publication_year", "created_by_id")
+        fields = ("title", "description", "filename", "cover_image", "content", "publication_year", "created_by_id")
 
     @post_load
     def make_post(self, data, **kwargs):

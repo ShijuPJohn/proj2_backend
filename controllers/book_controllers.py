@@ -1,11 +1,9 @@
 import os
 import time
-import uuid
 
 from flask import request, Blueprint, jsonify
 from flask_caching import Cache
 from flask_marshmallow import Marshmallow
-from werkzeug.utils import secure_filename
 
 from app import app
 from controllers.jwt_util import validate_token, check_role
