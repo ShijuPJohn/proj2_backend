@@ -1,6 +1,11 @@
-from flask import request, Blueprint
+import os
+import time
+import uuid
+
+from flask import request, Blueprint, jsonify
 from flask_caching import Cache
 from flask_marshmallow import Marshmallow
+from werkzeug.utils import secure_filename
 
 from app import app
 from controllers.jwt_util import validate_token, check_role
@@ -12,6 +17,57 @@ cache = Cache(app)
 ma = Marshmallow(app)
 
 book_controller = Blueprint('book_controller', __name__)
+
+ALLOWED_EXTENSIONS = {'pdf'}
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def generate_unique_filename(filename):
+    timestamp = int(time.time())
+    extension = filename.rsplit('.', 1)[1].lower()
+    return f"{filename.rsplit('.', 1)[0]}_{timestamp}.{extension}"
+
+
+@book_controller.route('/api/upload-pdf', methods=['POST'])
+@validate_token
+@check_role
+def upload_pdf(user_from_token):
+    print(request.files)
+    if 'pdf' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['pdf']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        unique_filename = generate_unique_filename(file.filename)
+        file_path = os.path.join(app.config['PROTECTED_UPLOADS_DIR'], unique_filename)
+        file.save(file_path)
+        return jsonify({'message': 'File successfully uploaded', 'filename': unique_filename}), 201
+    else:
+        return jsonify({'error': 'Invalid file type'}), 400
+
+
+@book_controller.route('/api/upload-cover-image', methods=['POST'])
+@validate_token
+@check_role
+def upload_cover_image(user_from_token):
+    print(request.files)
+    if 'image' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    extension = file.filename.rsplit('.', 1)[1].lower()
+    if file and extension in ["jpeg", "jpg", "png", "gif", "svg", "bmp"]:
+        unique_filename = generate_unique_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOADS_DIR'], unique_filename)
+        file.save(file_path)
+        return jsonify({'message': 'File successfully uploaded', 'filename': unique_filename}), 201
+    else:
+        return jsonify({'error': 'Invalid file type'}), 400
 
 
 @book_controller.route('/api/sections', methods=['POST'])

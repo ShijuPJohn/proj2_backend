@@ -7,12 +7,13 @@ from flask_caching import Cache
 
 
 def create_app():
-    app = Flask(__name__, template_folder="templates")
+    app = Flask(__name__,   static_folder='static', static_url_path='/static')
     if os.getenv('ENV', "development") == "production":
         app.config.from_object(ProductionConfig)
     else:
         app.config.from_object(LocalDevelopmentConfig)
-    app.config['UPLOADS_DIR'] = 'static/uploads/'
+    app.config['UPLOADS_DIR'] = os.path.join(app.static_folder, 'uploads')
+    app.config['PROTECTED_UPLOADS_DIR'] = os.path.join('protected_uploads')
     db.init_app(app)
     CORS(app)
     app.config['CORS_HEADERS'] = 'Content-Type'

@@ -47,6 +47,7 @@ class EBook(db.Model):
     title = db.Column(db.String, unique=True, nullable=False)
     description = db.Column(db.String)
     cover_image = db.Column(db.String, default="static/uploads/user_thumbs/pro_img1.png")
+    filename= db.Column(db.String)
     content = db.Column(db.String)
     publication_year = db.Column(db.Integer)
     requests = db.relationship('Request', backref='book')
