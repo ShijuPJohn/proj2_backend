@@ -106,7 +106,7 @@ ebook_create_schema = EBookCreateSchema()
 class EBookMinimalDisplaySchema(ma.Schema):
     class Meta:
         model = EBook
-        fields = ("title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
+        fields = ("id", "title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
                   "authors")
 
     authors = fields.Nested(authors_minimal_schema)
@@ -144,7 +144,7 @@ requests_populated_display_schema = RequestPopulatedDisplaySchema(many=True)
 class IssueDisplaySchema(ma.Schema):
     class Meta:
         model = Issue
-        fields = ("id", "user_id", "book_id")
+        fields = ("id", "user_id", "book_id", "created_time", "returned_time")
 
 
 issue_display_schema = IssueDisplaySchema()

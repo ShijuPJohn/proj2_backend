@@ -1,11 +1,12 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_caching import Cache
 from flask_marshmallow import Marshmallow
 
 from app import app
 from controllers.jwt_util import validate_token, check_role
-from models.models import Request, db
-from serializers.book_serializers import requests_display_schema, requests_populated_display_schema
+from models.models import Request, db, Issue
+from serializers.book_serializers import requests_display_schema, requests_populated_display_schema, \
+    issue_display_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -38,6 +39,19 @@ def delete_request(user_from_token, bid):
     return jsonify({'message': 'Book request deleted'}), 200
 
 
+@request_controller.route('/api/request_librarian/<int:rid>', methods=["DELETE"])
+@validate_token
+@check_role
+def delete_request_by_id(user_from_token, rid):
+    request = Request.query.get(rid)
+    print(request)
+    if not request:
+        return jsonify({"message": "Request not found"}), 404
+    db.session.delete(request)
+    db.session.commit()
+    return jsonify({'message': 'Book request deleted'}), 200
+
+
 @request_controller.route('/api/user-book-requests', methods=["GET"])
 @validate_token
 def get_user_requests(user_from_token, bid):
@@ -53,3 +67,19 @@ def get_user_requests(user_from_token, bid):
 def get_all_requests(user_from_token):
     all_requests = Request.query.all()
     return jsonify({'requests': requests_populated_display_schema.dump(all_requests)}), 200
+
+
+@request_controller.route('/api/book-issue', methods=["POST"])
+@validate_token
+@check_role
+def create_issue(user_from_token):
+    data = request.json
+    request_id = data["request"]
+    request_object = Request.query.get(request_id)
+    if not request_object:
+        return jsonify({'message': "no requests found"}), 404
+    issue = Issue(user_id=request_object.user_id, book_id=request_object.book_id)
+    db.session.add(issue)
+    db.session.delete(request_object)
+    db.session.commit()
+    return jsonify({'message': 'Issue created', "issue": issue_display_schema.dump(issue)}), 201
