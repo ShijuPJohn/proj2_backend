@@ -9,7 +9,8 @@ from app import app
 from controllers.jwt_util import validate_token, check_role
 from models.models import db, EBook, Section, Author
 from serializers.book_serializers import section_create_schema, section_schema, author_create_schema, author_schema, \
-    ebook_create_schema, ebook_schema, ebook_minimal_display_schema, sections_schema, authors_schema, ebooks_schema
+    ebook_create_schema, ebook_schema, ebook_minimal_display_schema, sections_schema, authors_schema, ebooks_schema, \
+    requests_display_schema, issues_display_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -278,7 +279,10 @@ def delete_author(user_from_token, id):
 def get_all_books(user_from_token):
     try:
         books = EBook.query.all()
-        return {"ebooks": ebooks_schema.dump(books)}, 200
+        issues = [issue for issue in user_from_token.issues if not issue.returned]
+        return {"ebooks": ebooks_schema.dump(books),
+                "requests": requests_display_schema.dump(user_from_token.requests),
+                "issues": issues_display_schema.dump(issues)}, 200
 
     except Exception as e:
         print(e)

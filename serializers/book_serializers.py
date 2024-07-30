@@ -3,7 +3,7 @@ from marshmallow import post_load
 from marshmallow_sqlalchemy import fields
 
 from app import app
-from models.models import Section, EBook, Author
+from models.models import Section, EBook, Author, Request, Issue
 from serializers.user_serializers import user_display_schema, user_minimal_display_schema
 
 ma = Marshmallow(app)
@@ -78,7 +78,7 @@ authors_minimal_schema = AuthorSchema(many=True)
 class EBookSchema(ma.Schema):
     class Meta:
         model = EBook
-        fields = ("title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
+        fields = ("id", "title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
                   "authors")
 
     authors = fields.Nested(authors_minimal_schema)
@@ -116,3 +116,36 @@ class EBookMinimalDisplaySchema(ma.Schema):
 
 ebook_minimal_display_schema = EBookMinimalDisplaySchema()
 ebooks_minimal_display_schema = EBookMinimalDisplaySchema(many=True)
+
+
+class RequestDisplaySchema(ma.Schema):
+    class Meta:
+        model = Request
+        fields = ("id", "user_id", "book_id")
+
+
+request_display_schema = RequestDisplaySchema()
+requests_display_schema = RequestDisplaySchema(many=True)
+
+
+class RequestPopulatedDisplaySchema(ma.Schema):
+    class Meta:
+        model = Request
+        fields = ("id", "user", "book")
+
+    user = fields.Nested(user_minimal_display_schema)
+    book = fields.Nested(ebook_minimal_display_schema)
+
+
+request_populated_display_schema = RequestPopulatedDisplaySchema()
+requests_populated_display_schema = RequestPopulatedDisplaySchema(many=True)
+
+
+class IssueDisplaySchema(ma.Schema):
+    class Meta:
+        model = Issue
+        fields = ("id", "user_id", "book_id")
+
+
+issue_display_schema = IssueDisplaySchema()
+issues_display_schema = IssueDisplaySchema(many=True)
