@@ -149,3 +149,15 @@ class IssueDisplaySchema(ma.Schema):
 
 issue_display_schema = IssueDisplaySchema()
 issues_display_schema = IssueDisplaySchema(many=True)
+
+
+class IssuePopulatedDisplaySchema(ma.Schema):
+    class Meta:
+        model = Issue
+        fields = ("id", "book")
+
+    book = fields.Nested(ebook_minimal_display_schema)
+
+
+issue_populated_display_schema = IssuePopulatedDisplaySchema()
+issues_populated_display_schema = IssuePopulatedDisplaySchema(many=True)
