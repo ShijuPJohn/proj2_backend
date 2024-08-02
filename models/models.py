@@ -31,11 +31,11 @@ class User(db.Model):
     created_authors = db.relationship('Author', backref='created_by')
     created_ebooks = db.relationship('EBook', backref='created_by')
 
-    def __init__(self, username, email, password, role):
-        self.username = username
-        self.email = email
-        self.password = password
-        self.role = role
+    # def __init__(self, username, email, password, role):
+    #     self.username = username
+    #     self.email = email
+    #     self.password = password
+    #     self.role = role
 
     def __str__(self):
         return "User object | email: " + self.email
@@ -98,6 +98,9 @@ class Request(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)
     date_time_created = db.Column(DateTime(timezone=True), server_default=func.now())
+    date_time_disposed = db.Column(DateTime(timezone=True))
+    status = db.Column(db.String, default="open", nullable=False)
+    issue = db.relationship('Issue', backref='request')
 
     def __str__(self):
         return "Request object | book_id: " + str(self.book_id) + " requested by user_id: " + str(self.user_id)
@@ -125,6 +128,6 @@ class Issue(db.Model):
     returned = db.Column(db.Boolean, default=False)
     date_time_issued = db.Column(DateTime(timezone=True), server_default=func.now())
     date_time_returned = db.Column(DateTime(timezone=True), server_default=func.now())
-
+    request_id = db.Column(db.Integer, db.ForeignKey('requests.id'), nullable=False)
     def __str__(self):
         return "Issue object"

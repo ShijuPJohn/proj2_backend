@@ -6,7 +6,7 @@ from app import app
 from controllers.jwt_util import validate_token, check_role
 from models.models import Request, db, Issue
 from serializers.book_serializers import requests_display_schema, requests_populated_display_schema, \
-    issue_display_schema, issues_display_schema, issues_populated_display_schema, issue_populated_display_schema
+    issue_display_schema, issues_populated_display_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -17,12 +17,12 @@ request_controller = Blueprint('request_controller', __name__)
 @request_controller.route('/api/book-request/<int:bid>', methods=["POST"])
 @validate_token
 def create_request(user_from_token, bid):
-    if len(user_from_token.requests) == 5:
+    if len([req for req in user_from_token.requests if req.status == "open"]) >= 5:
         return jsonify({'message': 'Request limit reached'}), 400
     if bid in [issue.book_id for issue in user_from_token.issues if not issue.returned]:
         return jsonify({'message': 'Book already issued'}), 400
-    for request in user_from_token.requests:
-        if request.book_id == bid:
+    for book_id in [r.book_id for r in user_from_token.requests if r.status == "open"]:
+        if book_id == bid:
             return jsonify({'message': 'Book already requested'}), 400
     new_request = Request(user_id=user_from_token.id, book_id=bid)
     db.session.add(new_request)
@@ -33,31 +33,32 @@ def create_request(user_from_token, bid):
 @request_controller.route('/api/book-request/<int:bid>', methods=["DELETE"])
 @validate_token
 def delete_request(user_from_token, bid):
-    if bid not in [request.book_id for request in user_from_token.requests]:
+    if bid not in [r.book_id for r in user_from_token.requests if r.status == "open"]:
         return jsonify({'message': 'No request exists for this book'}), 400
-    request = [request for request in user_from_token.requests if request.book_id == bid][0]
-    db.session.delete(request)
+    rq = [r for r in user_from_token.requests if r.status == "open" and r.book_id == bid][0]
+    rq.status = "closed"
+    db.session.add(rq)
     db.session.commit()
-    return jsonify({'message': 'Book request deleted'}), 200
+    return jsonify({'message': 'Request Removed'}), 200
 
 
 @request_controller.route('/api/request_librarian/<int:rid>', methods=["DELETE"])
 @validate_token
 @check_role
-def delete_request_by_id(user_from_token, rid):
-    request = Request.query.get(rid)
-    print(request)
+def delete_request_by_requestid(user_from_token, rid):
+    rq = Request.query.get(rid)
     if not request:
         return jsonify({"message": "Request not found"}), 404
-    db.session.delete(request)
+    rq.status = "rejected"
+    db.session.add(rq)
     db.session.commit()
-    return jsonify({'message': 'Book request deleted'}), 200
+    return jsonify({'message': 'Request Rejected'}), 200
 
 
 @request_controller.route('/api/user-book-requests', methods=["GET"])
 @validate_token
 def get_user_requests(user_from_token, bid):
-    user_requests = user_from_token.requests
+    user_requests = [rqs for rqs in user_from_token.requests if rqs.status == "open"]
     if len(user_requests) == 0:
         return jsonify({'message': "no requests found"}), 404
     return jsonify({'requests': requests_display_schema.dump(user_requests)}), 201
@@ -67,8 +68,8 @@ def get_user_requests(user_from_token, bid):
 @validate_token
 @check_role
 def get_all_requests(user_from_token):
-    all_requests = Request.query.all()
-    return jsonify({'requests': requests_populated_display_schema.dump(all_requests)}), 200
+    open_requests = Request.query.filter_by(status='open').all()
+    return jsonify({'requests': requests_populated_display_schema.dump(open_requests)}), 200
 
 
 @request_controller.route('/api/book-issue', methods=["POST"])
@@ -84,9 +85,10 @@ def create_issue(user_from_token):
         return jsonify({'message': "same book already issued"}), 400
     if not request_object:
         return jsonify({'message': "no requests found"}), 404
-    issue = Issue(user_id=request_object.user_id, book_id=request_object.book_id)
+    issue = Issue(user_id=request_object.user_id, book_id=request_object.book_id, request_id=request_id)
+    request_object.status = "issued"
     db.session.add(issue)
-    db.session.delete(request_object)
+    db.session.add(request_object)
     db.session.commit()
     return jsonify({'message': 'Issue created', "issue": issue_display_schema.dump(issue)}), 201
 
@@ -99,3 +101,18 @@ def get_user_issues(user_from_token):
     if not issues:
         return jsonify({'message': "no live issues found"}), 404
     return jsonify({"issues": issues_populated_display_schema.dump(issues)}), 200
+
+
+@request_controller.route('/api/return-book/<bid>', methods=["PUT"])
+@validate_token
+def return_book(user_from_token, bid):
+    print(bid)
+    print(user_from_token.issues)
+    issues = [issue for issue in user_from_token.issues if issue.book_id == int(bid) and not issue.returned]
+    if not issues:
+        return jsonify({'message': "no issues found"}), 404
+    issue = issues[0]
+    issue.returned = True
+    db.session.add(issue)
+    db.session.commit()
+    return jsonify({'message': 'Book returned', "issue": issue_display_schema.dump(issue)}), 200

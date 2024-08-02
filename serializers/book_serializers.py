@@ -79,7 +79,7 @@ class EBookSchema(ma.Schema):
     class Meta:
         model = EBook
         fields = ("id", "title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
-                  "authors")
+                  "authors", "filename")
 
     authors = fields.Nested(authors_minimal_schema)
     sections = fields.Nested(sections_minimal_display_schema)

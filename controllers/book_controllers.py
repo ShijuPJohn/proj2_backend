@@ -1,7 +1,7 @@
 import os
 import time
 
-from flask import request, Blueprint, jsonify
+from flask import request, Blueprint, jsonify, send_from_directory
 from flask_caching import Cache
 from flask_marshmallow import Marshmallow
 
@@ -131,15 +131,20 @@ def create_book(user_from_token):
         return {"message": "error"}, 500
 
 
-@book_controller.route('/api/books/<int:id>', methods=['GET'])
+@book_controller.route('/api/books/<int:bid>', methods=['GET'])
 @validate_token
-def get_book_by_id(user_from_token, id):
+def get_book_by_id(user_from_token, bid):
+    requested = False
+    issued = False
     try:
-        book = EBook.query.get(id)
+        book = EBook.query.get(bid)
         if not book:
             return {"message": "Book not found"}, 404
-
-        return {"ebook": ebook_schema.dump(book)}, 200
+        if book.id in [r.book_id for r in user_from_token.requests if r.status == "open"]:
+            requested = True
+        if book.id in [i.book_id for i in user_from_token.issues if not i.returned]:
+            issued= True
+        return {"ebook": ebook_schema.dump(book), "requested": requested, "issued": issued}, 200
 
     except Exception as e:
         print(e)
@@ -281,7 +286,8 @@ def get_all_books(user_from_token):
         books = EBook.query.all()
         issues = [issue for issue in user_from_token.issues if not issue.returned]
         return {"ebooks": ebooks_schema.dump(books),
-                "requests": requests_display_schema.dump(user_from_token.requests),
+                "requests": requests_display_schema.dump(
+                    [rq for rq in user_from_token.requests if rq.status == "open"]),
                 "issues": issues_display_schema.dump(issues)}, 200
 
     except Exception as e:
@@ -326,3 +332,16 @@ def delete_book(user_from_token, id):
     except Exception as e:
         print(e)
         return {"message": "error"}, 500
+
+
+@book_controller.route('/api/book-file/<int:bid>', methods=['GET'])
+@validate_token
+def get_book(user_from_token, bid):
+    book = EBook.query.get(bid)
+    if not book:
+        return jsonify({"message": "book not found"}), 404
+    if (not user_from_token.role == "librarian") and book.id not in [issue.book_id for issue in user_from_token.issues
+                                                                     if
+                                                                     not issue.returned]:
+        return jsonify({"message": "unauthorized"}), 401
+    return send_from_directory(directory="protected_uploads", path=book.filename, as_attachment=True)
