@@ -50,9 +50,9 @@ class EBook(db.Model):
     filename = db.Column(db.String)
     content = db.Column(db.String)
     publication_year = db.Column(db.Integer)
-    requests = db.relationship('Request', backref='book')
-    issues = db.relationship('Issue', backref='book')
-    reviews = db.relationship('Review', backref='book')
+    requests = db.relationship('Request', backref='book', cascade='all, delete-orphan')
+    issues = db.relationship('Issue', backref='book', cascade='all, delete-orphan')
+    reviews = db.relationship('Review', backref='book', cascade='all, delete-orphan')
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def __str__(self):
@@ -96,7 +96,7 @@ class Request(db.Model):
     __tablename__ = 'requests'
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     date_time_created = db.Column(DateTime(timezone=True), server_default=func.now())
     date_time_disposed = db.Column(DateTime(timezone=True))
     status = db.Column(db.String, default="open", nullable=False)
@@ -110,7 +110,7 @@ class Review(db.Model):
     __tablename__ = 'reviews'
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     rating_score = db.Column(db.Integer, nullable=False)
     review_text = db.Column(db.String, nullable=True)
     date_time_created = db.Column(DateTime(timezone=True), server_default=func.now())
@@ -124,7 +124,7 @@ class Issue(db.Model):
     __tablename__ = 'issues'
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     returned = db.Column(db.Boolean, default=False)
     date_time_issued = db.Column(DateTime(timezone=True), server_default=func.now())
     date_time_returned = db.Column(DateTime(timezone=True), server_default=func.now())

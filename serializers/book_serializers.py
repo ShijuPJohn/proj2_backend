@@ -57,8 +57,8 @@ author_create_schema = AuthorCreateSchema()
 
 class AuthorSchema(ma.Schema):
     class Meta:
-        model = Section
-        fields = ("id", "name", "date_time_created", "description", "image_url", "created_by_id")
+        model = Author
+        fields = ("id", "name", "date_time_created")
 
 
 author_schema = AuthorSchema()
@@ -67,7 +67,7 @@ authors_schema = AuthorSchema(many=True)
 
 class AuthorMinimalSchema(ma.Schema):
     class Meta:
-        model = Section
+        model = Author
         fields = ("id", "name",)
 
 
@@ -106,12 +106,11 @@ ebook_create_schema = EBookCreateSchema()
 class EBookMinimalDisplaySchema(ma.Schema):
     class Meta:
         model = EBook
-        fields = ("id", "title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
-                  "authors")
+        fields = ("id", "title", "cover_image", "publication_year", "sections",
+                  "authors", "filename")
 
     authors = fields.Nested(authors_minimal_schema)
     sections = fields.Nested(sections_minimal_display_schema)
-    created_by = fields.Nested(user_minimal_display_schema)
 
 
 ebook_minimal_display_schema = EBookMinimalDisplaySchema()

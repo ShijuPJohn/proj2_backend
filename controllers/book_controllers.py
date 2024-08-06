@@ -10,7 +10,7 @@ from controllers.jwt_util import validate_token, check_role
 from models.models import db, EBook, Section, Author
 from serializers.book_serializers import section_create_schema, section_schema, author_create_schema, author_schema, \
     ebook_create_schema, ebook_schema, ebook_minimal_display_schema, sections_schema, authors_schema, ebooks_schema, \
-    requests_display_schema, issues_display_schema
+    requests_display_schema, issues_display_schema, author_minimal_schema, ebooks_minimal_display_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -91,14 +91,11 @@ def create_section(user_from_token):
 def create_author(user_from_token):
     try:
         data = request.json
-        print(data)
         data["created_by_id"] = user_from_token.id
         author_object = author_create_schema.load(data)
-        print("author_object", author_object)
         db.session.add(author_object)
         db.session.commit()
-        print(author_object)
-        return {"message": author_schema.dump(data)}, 201
+        return {"author": author_minimal_schema.dump(author_object)}, 201
 
     except Exception as e:
         print(e)
@@ -143,7 +140,7 @@ def get_book_by_id(user_from_token, bid):
         if book.id in [r.book_id for r in user_from_token.requests if r.status == "open"]:
             requested = True
         if book.id in [i.book_id for i in user_from_token.issues if not i.returned]:
-            issued= True
+            issued = True
         return {"ebook": ebook_schema.dump(book), "requested": requested, "issued": issued}, 200
 
     except Exception as e:
@@ -181,6 +178,7 @@ def get_section_by_id(user_from_token, id):
 
 @book_controller.route('/api/sections/<int:id>', methods=['PUT'])
 @validate_token
+@check_role
 def update_section(user_from_token, id):
     try:
         section = Section.query.get(id)
@@ -190,7 +188,6 @@ def update_section(user_from_token, id):
         data = request.json
         section.name = data.get("name", section.name)
         section.description = data.get("description", section.description)
-        section.image_url = data.get("image_url", section.image_url)
         db.session.commit()
         return {"section": section_schema.dump(section)}, 200
 
@@ -254,6 +251,7 @@ def update_author(user_from_token, id):
 
         data = request.json
         author.name = data.get("name", author.name)
+        db.session.add(author)
         db.session.commit()
         return {"author": author_schema.dump(author)}, 200
 
@@ -264,6 +262,7 @@ def update_author(user_from_token, id):
 
 @book_controller.route('/api/authors/<int:id>', methods=['DELETE'])
 @validate_token
+@check_role
 def delete_author(user_from_token, id):
     try:
         author = Author.query.get(id)
@@ -284,12 +283,13 @@ def delete_author(user_from_token, id):
 def get_all_books(user_from_token):
     try:
         books = EBook.query.all()
+        if user_from_token.role == "librarian":
+            return jsonify({"ebooks": ebooks_minimal_display_schema.dump(books)}), 200
         issues = [issue for issue in user_from_token.issues if not issue.returned]
-        return {"ebooks": ebooks_schema.dump(books),
-                "requests": requests_display_schema.dump(
-                    [rq for rq in user_from_token.requests if rq.status == "open"]),
-                "issues": issues_display_schema.dump(issues)}, 200
-
+        return jsonify({"ebooks": ebooks_schema.dump(books),
+                        "requests": requests_display_schema.dump(
+                            [rq for rq in user_from_token.requests if rq.status == "open"]),
+                        "issues": issues_display_schema.dump(issues)}), 200
     except Exception as e:
         print(e)
         return {"message": "error"}, 500
@@ -319,9 +319,11 @@ def update_book(user_from_token, id):
 
 @book_controller.route('/api/books/<int:id>', methods=['DELETE'])
 @validate_token
+@check_role
 def delete_book(user_from_token, id):
     try:
         book = EBook.query.get(id)
+        print(book)
         if not book:
             return {"message": "Book not found"}, 404
 
