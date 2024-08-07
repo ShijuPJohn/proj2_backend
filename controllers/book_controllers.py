@@ -141,7 +141,7 @@ def get_book_by_id(user_from_token, bid):
             requested = True
         if book.id in [i.book_id for i in user_from_token.issues if not i.returned]:
             issued = True
-        return {"ebook": ebook_schema.dump(book), "requested": requested, "issued": issued}, 200
+        return {"book": ebook_schema.dump(book), "requested": requested, "issued": issued}, 200
 
     except Exception as e:
         print(e)
@@ -299,7 +299,7 @@ def get_all_books(user_from_token):
 @validate_token
 def update_book(user_from_token, id):
     try:
-        book = EBook.query.get(id)
+        book = EBook.query.get(int(id))
         if not book:
             return {"message": "Book not found"}, 404
 
