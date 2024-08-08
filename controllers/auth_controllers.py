@@ -7,7 +7,7 @@ from flask_marshmallow import Marshmallow
 from marshmallow import ValidationError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from controllers.jwt_util import validate_token
+from controllers.jwt_util import validate_token, check_role
 from serializers.user_serializers import user_signup_schema, user_display_schema, users_display_schema
 from app import app
 from models.models import User, db
@@ -18,8 +18,8 @@ ma = Marshmallow(app)
 user_controller = Blueprint('user_controller', __name__)
 
 
-def is_admin(user):
-    return user.role == 'admin'
+def is_librarian(user):
+    return user.role == 'librarian'
 
 
 @cache.cached(timeout=30)
@@ -69,33 +69,27 @@ def api_user_login():
 
 @user_controller.route('/api/users', methods=['GET'])
 @validate_token
-def get_all_users(current_user):
+@check_role
+def get_all_users(user_from_token):
     try:
-        users = User.query.all()
+        users = [user for user in User.query.all() if user != user_from_token]
         return jsonify({"users": users_display_schema.dump(users)}), 200
     except Exception as e:
         print(e)
         return jsonify({"message": "internal_server_error"}), 500
 
 
-@user_controller.route('/api/users/<int:user_id>', methods=['GET'])
+@user_controller.route('/api/user/', methods=['GET'])
 @validate_token
-def get_user_by_id(current_user, user_id):
-    try:
-        user = User.query.get(user_id)
-        if not user:
-            return jsonify({"message": "user_not_found"}), 404
-        return jsonify({"user": user_display_schema.dump(user)}), 200
-    except Exception as e:
-        print(e)
-        return jsonify({"message": "internal_server_error"}), 500
+def get_user_by_id(user_from_token):
+    return jsonify({"user": user_display_schema.dump(user_from_token)}), 200
 
 
 @user_controller.route('/api/users/<int:user_id>', methods=['PUT'])
 @validate_token
-def update_user(current_user, user_id):
+def update_user(user_from_token, user_id):
     try:
-        if current_user.id != user_id and not is_admin(current_user):
+        if user_from_token.id != user_id and not is_librarian(user_from_token):
             return jsonify({"message": "unauthorized"}), 403
 
         data = request.json
@@ -109,7 +103,7 @@ def update_user(current_user, user_id):
             user.email = data['email']
         if 'password' in data:
             user.password = generate_password_hash(data['password'], method="scrypt")
-        if 'role' in data and is_admin(current_user):
+        if 'role' in data and is_librarian(user_from_token):
             user.role = data['role']
 
         db.session.commit()
@@ -121,9 +115,9 @@ def update_user(current_user, user_id):
 
 @user_controller.route('/api/users/<int:user_id>', methods=['DELETE'])
 @validate_token
-def delete_user(current_user, user_id):
+def delete_user(user_from_token, user_id):
     try:
-        if current_user.id != user_id and not is_admin(current_user):
+        if user_from_token.id != user_id and not is_librarian(user_from_token):
             return jsonify({"message": "unauthorized"}), 403
 
         user = User.query.get(user_id)

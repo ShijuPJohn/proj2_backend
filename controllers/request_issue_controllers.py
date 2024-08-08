@@ -93,11 +93,14 @@ def create_issue(user_from_token):
     return jsonify({'message': 'Issue created', "issue": issue_display_schema.dump(issue)}), 201
 
 
-@request_controller.route('/api/user-issues', methods=["GET"])
+@request_controller.route('/api/issues', methods=["GET"])
 @validate_token
 def get_user_issues(user_from_token):
-    issues = [issue for issue in user_from_token.issues if not issue.returned]
-    print(issues)
+    issues = None
+    if user_from_token.role == "librarian":
+        issues = Issue.query.filter_by(returned=False).all()
+    else:
+        issues = [issue for issue in user_from_token.issues if not issue.returned]
     if not issues:
         return jsonify({'message': "no live issues found"}), 404
     return jsonify({"issues": issues_populated_display_schema.dump(issues)}), 200
@@ -112,6 +115,19 @@ def return_book(user_from_token, bid):
     if not issues:
         return jsonify({'message': "no issues found"}), 404
     issue = issues[0]
+    issue.returned = True
+    db.session.add(issue)
+    db.session.commit()
+    return jsonify({'message': 'Book returned', "issue": issue_display_schema.dump(issue)}), 200
+
+
+@request_controller.route('/api/return-book-iid/<iid>', methods=["PUT"])
+@validate_token
+def return_book_by_issue_id(user_from_token, iid):
+    if user_from_token.role != "librarian" and int(iid) not in [issue.id for issue in user_from_token.issues if
+                                                                not issue.returned]:
+        return jsonify({'message': "no issues found"}), 404
+    issue = Issue.query.get(int(iid))
     issue.returned = True
     db.session.add(issue)
     db.session.commit()

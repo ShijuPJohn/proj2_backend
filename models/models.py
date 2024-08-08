@@ -23,9 +23,9 @@ class User(db.Model):
     about = db.Column(db.String)
     imageUrl = db.Column(db.String, nullable=True, default="static/uploads/user_thumbs/pro_img1.png")
     date_time_created = db.Column(DateTime(timezone=True), server_default=func.now())
-    requests = db.relationship('Request', backref='user')
-    issues = db.relationship('Issue', backref='user')
-    reviews = db.relationship('Review', backref='user')
+    requests = db.relationship('Request', backref='user', cascade='all, delete-orphan')
+    issues = db.relationship('Issue', backref='user', cascade='all, delete-orphan')
+    reviews = db.relationship('Review', backref='user', cascade='all, delete-orphan')
     role = db.Column(db.String, nullable=False)
     created_sections = db.relationship('Section', backref='created_by')
     created_authors = db.relationship('Author', backref='created_by')
@@ -95,7 +95,7 @@ class Author(db.Model):
 class Request(db.Model):
     __tablename__ = 'requests'
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     date_time_created = db.Column(DateTime(timezone=True), server_default=func.now())
     date_time_disposed = db.Column(DateTime(timezone=True))
@@ -109,7 +109,7 @@ class Request(db.Model):
 class Review(db.Model):
     __tablename__ = 'reviews'
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     rating_score = db.Column(db.Integer, nullable=False)
     review_text = db.Column(db.String, nullable=True)
@@ -123,7 +123,7 @@ class Review(db.Model):
 class Issue(db.Model):
     __tablename__ = 'issues'
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
     returned = db.Column(db.Boolean, default=False)
     date_time_issued = db.Column(DateTime(timezone=True), server_default=func.now())
