@@ -66,9 +66,11 @@ def get_user_requests(user_from_token, bid):
 
 @request_controller.route('/api/requests', methods=["GET"])
 @validate_token
-@check_role
 def get_all_requests(user_from_token):
-    open_requests = Request.query.filter_by(status='open').all()
+    if user_from_token.role == "librarian":
+        open_requests = Request.query.filter_by(status='open').all()
+    else:
+        open_requests = [request for request in user_from_token.requests if request.status == "open"]
     return jsonify({'requests': requests_populated_display_schema.dump(open_requests)}), 200
 
 

@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 
 import jwt
@@ -7,6 +8,7 @@ from flask_marshmallow import Marshmallow
 from marshmallow import ValidationError
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from controllers.book_controllers import generate_unique_filename
 from controllers.jwt_util import validate_token, check_role
 from serializers.user_serializers import user_signup_schema, user_display_schema, users_display_schema
 from app import app
@@ -99,15 +101,40 @@ def update_user(user_from_token, user_id):
 
         if 'username' in data:
             user.username = data['username']
-        if 'email' in data:
+        if not is_librarian(user_from_token) and 'email' in data:
             user.email = data['email']
-        if 'password' in data:
-            user.password = generate_password_hash(data['password'], method="scrypt")
-        if 'role' in data and is_librarian(user_from_token):
-            user.role = data['role']
-
+        if 'about' in data:
+            user.about = data['about']
+        if 'imageUrl' in data:
+            user.imageUrl = data['imageUrl']
+        # if 'password' in data:
+        #     user.password = generate_password_hash(data['password'], method="scrypt")
+        db.session.add(user)
         db.session.commit()
         return jsonify({"user": user_display_schema.dump(user)}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "internal_server_error"}), 500
+
+
+@user_controller.route('/api/users-password/<int:user_id>', methods=['PUT'])
+@validate_token
+def change_password(user_from_token, user_id):
+    try:
+        if user_from_token.id != user_id and not is_librarian(user_from_token):
+            return jsonify({"message": "unauthorized"}), 403
+        data = request.json
+        user = User.query.get(user_id)
+        if "current_password" not in data or "new_password" not in data:
+            return jsonify({"message": "bad request"}), 400
+        current_password_from_request = data["current_password"]
+        new_password_from_request = data["new_password"]
+        if not check_password_hash(user_from_token.password, current_password_from_request):
+            return jsonify({"message": "unauthorized"}), 403
+        user.password = generate_password_hash(new_password_from_request, method="scrypt")
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({"message": "password changed successfully"}), 200
     except Exception as e:
         print(e)
         return jsonify({"message": "internal_server_error"}), 500
@@ -130,3 +157,21 @@ def delete_user(user_from_token, user_id):
     except Exception as e:
         print(e)
         return jsonify({"message": "internal_server_error"}), 500
+
+
+@user_controller.route('/api/profile-photo', methods=['POST'])
+@validate_token
+def upload_cover_image(user_from_token):
+    if 'image' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    extension = file.filename.rsplit('.', 1)[1].lower()
+    if file and extension in ["jpeg", "jpg", "png", "gif", "svg", "bmp"]:
+        unique_filename = generate_unique_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOADS_DIR'], 'user_thumbs', unique_filename)
+        file.save(file_path)
+        return jsonify({'message': 'File successfully uploaded', 'filename': unique_filename}), 201
+    else:
+        return jsonify({'error': 'Invalid file type'}), 400
