@@ -4,9 +4,10 @@ from flask_marshmallow import Marshmallow
 
 from app import app
 from controllers.jwt_util import validate_token, check_role
-from models.models import Request, db, Issue
+from models.models import Request, db, Issue, Purchase
 from serializers.book_serializers import requests_display_schema, requests_populated_display_schema, \
-    issue_display_schema, issues_populated_display_schema
+    issue_display_schema, issues_populated_display_schema, purchase_create_schema, purchase_populated_schema, \
+    purchases_populated_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -134,3 +135,35 @@ def return_book_by_issue_id(user_from_token, iid):
     db.session.add(issue)
     db.session.commit()
     return jsonify({'message': 'Book returned', "issue": issue_display_schema.dump(issue)}), 200
+
+
+@request_controller.route('/api/purchases', methods=['POST'])
+@validate_token
+def create_purchase(user_from_token):
+    try:
+        data = request.json
+        print(data)
+        data["user_id"] = user_from_token.id
+        purchase_object = purchase_create_schema.load(data)
+        db.session.add(purchase_object)
+        db.session.commit()
+        return {"purchase": purchase_populated_schema.dump(purchase_object)}, 201
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500
+
+
+@request_controller.route('/api/purchases', methods=['GET'])
+@validate_token
+def get_all_purchase(user_from_token):
+    try:
+        if user_from_token.role == "librarian":
+            purchases = Purchase.query.all()
+        else:
+            purchases = user_from_token.purchases
+        return {"purchases": purchases_populated_schema.dump(purchases)}, 200
+
+    except Exception as e:
+        print(e)
+        return {"message": "error"}, 500

@@ -3,7 +3,7 @@ from marshmallow import post_load
 from marshmallow_sqlalchemy import fields
 
 from app import app
-from models.models import Section, EBook, Author, Request, Issue
+from models.models import Section, EBook, Author, Request, Issue, Purchase
 from serializers.user_serializers import user_display_schema, user_minimal_display_schema
 
 ma = Marshmallow(app)
@@ -78,8 +78,10 @@ authors_minimal_schema = AuthorSchema(many=True)
 class EBookSchema(ma.Schema):
     class Meta:
         model = EBook
-        fields = ("id", "title", "description", "cover_image", "content", "publication_year", "created_by", "sections",
-                  "authors", "filename")
+        fields = (
+            "id", "price", "title", "description", "cover_image", "content", "publication_year", "created_by",
+            "sections",
+            "authors", "filename","number_of_pages")
 
     authors = fields.Nested(authors_minimal_schema)
     sections = fields.Nested(sections_minimal_display_schema)
@@ -93,10 +95,12 @@ ebooks_schema = EBookSchema(many=True)
 class EBookCreateSchema(ma.Schema):
     class Meta:
         model = EBook
-        fields = ("title", "description", "filename", "cover_image", "content", "publication_year", "created_by_id")
+        fields = (
+            "title", "price", "description", "filename", "cover_image", "content", "publication_year", "created_by_id",
+            "number_of_pages")
 
     @post_load
-    def make_post(self, data, **kwargs):
+    def make_ebook(self, data, **kwargs):
         return EBook(**data)
 
 
@@ -107,7 +111,7 @@ class EBookMinimalDisplaySchema(ma.Schema):
     class Meta:
         model = EBook
         fields = ("id", "title", "cover_image", "publication_year", "sections",
-                  "authors", "filename")
+                  "authors", "filename", "price", "number_of_pages")
 
     authors = fields.Nested(authors_minimal_schema)
     sections = fields.Nested(sections_minimal_display_schema)
@@ -161,3 +165,42 @@ class IssuePopulatedDisplaySchema(ma.Schema):
 
 issue_populated_display_schema = IssuePopulatedDisplaySchema()
 issues_populated_display_schema = IssuePopulatedDisplaySchema(many=True)
+
+
+class PurchaseCreateSchema(ma.Schema):
+    class Meta:
+        model = Purchase
+        fields = (
+            "user_id", "book_id", "date_time", "card_number", "card_name", "card_expiry", "card_cvv")
+
+    @post_load
+    def make_purchase(self, data, **kwargs):
+        return Purchase(**data)
+
+
+purchase_create_schema = PurchaseCreateSchema()
+
+
+class PurchasePopulatedSchema(ma.Schema):
+    class Meta:
+        model = Purchase
+        fields = (
+            "id", "user", "book", "date_time")
+
+    book = fields.Nested(ebook_minimal_display_schema)
+    user = fields.Nested(user_minimal_display_schema)
+
+
+purchase_populated_schema = PurchasePopulatedSchema()
+purchases_populated_schema = PurchasePopulatedSchema(many=True)
+
+
+class PurchaseMinimalDisplaySchema(ma.Schema):
+    class Meta:
+        model = Purchase
+        fields = (
+            "id", "book_id", "user_id", "date_time")
+
+
+purchase_minimal_display_schema = PurchaseMinimalDisplaySchema()
+purchases_minimal_display_schema = PurchaseMinimalDisplaySchema(many=True)

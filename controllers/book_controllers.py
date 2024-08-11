@@ -10,7 +10,8 @@ from controllers.jwt_util import validate_token, check_role
 from models.models import db, EBook, Section, Author
 from serializers.book_serializers import section_create_schema, section_schema, author_create_schema, author_schema, \
     ebook_create_schema, ebook_schema, ebook_minimal_display_schema, sections_schema, authors_schema, ebooks_schema, \
-    requests_display_schema, issues_display_schema, author_minimal_schema, ebooks_minimal_display_schema
+    requests_display_schema, issues_display_schema, author_minimal_schema, ebooks_minimal_display_schema, \
+    purchases_minimal_display_schema
 
 cache = Cache(app)
 ma = Marshmallow(app)
@@ -133,6 +134,7 @@ def create_book(user_from_token):
 def get_book_by_id(user_from_token, bid):
     requested = False
     issued = False
+    purchased = False
     try:
         book = EBook.query.get(bid)
         if not book:
@@ -141,7 +143,9 @@ def get_book_by_id(user_from_token, bid):
             requested = True
         if book.id in [i.book_id for i in user_from_token.issues if not i.returned]:
             issued = True
-        return {"book": ebook_schema.dump(book), "requested": requested, "issued": issued}, 200
+        if book.id in [p.book_id for p in user_from_token.purchases]:
+            purchased = True
+        return {"book": ebook_schema.dump(book), "requested": requested, "issued": issued, "purchased": purchased}, 200
 
     except Exception as e:
         print(e)
@@ -150,7 +154,6 @@ def get_book_by_id(user_from_token, bid):
 
 @book_controller.route('/api/sections', methods=['GET'])
 @validate_token
-@check_role
 def get_all_sections(user_from_token):
     try:
         sections = Section.query.all()
@@ -215,7 +218,6 @@ def delete_section(user_from_token, id):
 
 @book_controller.route('/api/authors', methods=['GET'])
 @validate_token
-@check_role
 def get_all_authors(user_from_token):
     try:
         authors = Author.query.all()
@@ -282,14 +284,31 @@ def delete_author(user_from_token, id):
 @validate_token
 def get_all_books(user_from_token):
     try:
-        books = EBook.query.all()
+        author_name = request.args.get('author')
+        section_name = request.args.get('section')
+        search_text = request.args.get('search')
+        query = EBook.query
+        if author_name:
+            query = query.join(EBook.authors).filter(Author.name.ilike(f"%{author_name}%"))
+        if section_name:
+            query = query.join(EBook.sections).filter(Section.name.ilike(f"%{section_name}%"))
+        if search_text:
+            query = query.outerjoin(EBook.authors).outerjoin(EBook.sections).filter(
+                db.or_(
+                    EBook.title.ilike(f"%{search_text}%"),
+                    Author.name.ilike(f"%{search_text}%"),
+                    Section.name.ilike(f"%{search_text}%")
+                )
+            )
+        books = query.all()
         if user_from_token.role == "librarian":
             return jsonify({"ebooks": ebooks_minimal_display_schema.dump(books)}), 200
         issues = [issue for issue in user_from_token.issues if not issue.returned]
         return jsonify({"ebooks": ebooks_schema.dump(books),
                         "requests": requests_display_schema.dump(
                             [rq for rq in user_from_token.requests if rq.status == "open"]),
-                        "issues": issues_display_schema.dump(issues)}), 200
+                        "issues": issues_display_schema.dump(issues),
+                        "purchases": purchases_minimal_display_schema.dump(user_from_token.purchases)}), 200
     except Exception as e:
         print(e)
         return {"message": "error"}, 500
@@ -344,6 +363,7 @@ def get_book(user_from_token, bid):
         return jsonify({"message": "book not found"}), 404
     if (not user_from_token.role == "librarian") and book.id not in [issue.book_id for issue in user_from_token.issues
                                                                      if
-                                                                     not issue.returned]:
+                                                                     not issue.returned] and book.id not in [
+        purchase.book.id for purchase in user_from_token.purchases]:
         return jsonify({"message": "unauthorized"}), 401
     return send_from_directory(directory="protected_uploads", path=book.filename, as_attachment=True)

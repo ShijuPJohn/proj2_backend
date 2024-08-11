@@ -26,6 +26,7 @@ class User(db.Model):
     requests = db.relationship('Request', backref='user', cascade='all, delete-orphan')
     issues = db.relationship('Issue', backref='user', cascade='all, delete-orphan')
     reviews = db.relationship('Review', backref='user', cascade='all, delete-orphan')
+    purchases = db.relationship('Purchase', backref='user', cascade='all, delete-orphan')
     role = db.Column(db.String, nullable=False)
     created_sections = db.relationship('Section', backref='created_by')
     created_authors = db.relationship('Author', backref='created_by')
@@ -48,9 +49,12 @@ class EBook(db.Model):
     description = db.Column(db.String)
     cover_image = db.Column(db.String, default="static/uploads/user_thumbs/pro_img1.png")
     filename = db.Column(db.String)
+    price = db.Column(db.Float)
+    number_of_pages = db.Column(db.Integer)
     content = db.Column(db.String)
     publication_year = db.Column(db.Integer)
     requests = db.relationship('Request', backref='book', cascade='all, delete-orphan')
+    purchases = db.relationship('Purchase', backref='book', cascade='all, delete-orphan')
     issues = db.relationship('Issue', backref='book', cascade='all, delete-orphan')
     reviews = db.relationship('Review', backref='book', cascade='all, delete-orphan')
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -129,5 +133,17 @@ class Issue(db.Model):
     date_time_issued = db.Column(DateTime(timezone=True), server_default=func.now())
     date_time_returned = db.Column(DateTime(timezone=True), server_default=func.now())
     request_id = db.Column(db.Integer, db.ForeignKey('requests.id'), nullable=False)
+
     def __str__(self):
         return "Issue object"
+
+
+class Purchase(db.Model):
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    book_id = db.Column(db.Integer, db.ForeignKey('books.id', ondelete='CASCADE'), nullable=False)
+    date_time = db.Column(DateTime(timezone=True), server_default=func.now())
+    card_number = db.Column(db.String, nullable=False)
+    card_expiry = db.Column(db.String, nullable=False)
+    card_name = db.Column(db.String, nullable=False)
+    card_cvv = db.Column(db.String, nullable=False)
