@@ -3,7 +3,7 @@ from marshmallow import post_load
 from marshmallow_sqlalchemy import fields
 
 from app import app
-from models.models import Section, EBook, Author, Request, Issue, Purchase
+from models.models import Section, EBook, Author, Request, Issue, Purchase, Review
 from serializers.user_serializers import user_display_schema, user_minimal_display_schema
 
 ma = Marshmallow(app)
@@ -81,7 +81,7 @@ class EBookSchema(ma.Schema):
         fields = (
             "id", "price", "title", "description", "cover_image", "content", "publication_year", "created_by",
             "sections",
-            "authors", "filename","number_of_pages")
+            "authors", "filename", "number_of_pages")
 
     authors = fields.Nested(authors_minimal_schema)
     sections = fields.Nested(sections_minimal_display_schema)
@@ -204,3 +204,39 @@ class PurchaseMinimalDisplaySchema(ma.Schema):
 
 purchase_minimal_display_schema = PurchaseMinimalDisplaySchema()
 purchases_minimal_display_schema = PurchaseMinimalDisplaySchema(many=True)
+
+
+class ReviewCreateSchema(ma.Schema):
+    class Meta:
+        model = Review
+        fields = ("user_id", "book_id", "rating_score", "review_text", "date_time_created", "date_time_edited")
+
+    @post_load
+    def make_review(self, data, **kwargs):
+        return Review(**data)
+
+
+review_create_schema = ReviewCreateSchema()
+
+
+class ReviewMinimalDisplaySchema(ma.Schema):
+    class Meta:
+        model = Review
+        fields = ("id", "rating_score", "review_text", "date_time_created")
+
+
+review_minimal_display_schema = ReviewMinimalDisplaySchema()
+reviews_minimal_display_schema = ReviewMinimalDisplaySchema(many=True)
+
+
+class ReviewPopulatedDisplaySchema(ma.Schema):
+    class Meta:
+        model = Review
+        fields = ("id", "rating_score", "review_text", "date_time_created", "date_time_edited", "user", "book")
+
+    user = fields.Nested(user_minimal_display_schema)
+    book = fields.Nested(ebook_minimal_display_schema)
+
+
+review_populated_display_schema = ReviewPopulatedDisplaySchema()
+reviews_populated_display_schema = ReviewPopulatedDisplaySchema(many=True)

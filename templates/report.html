@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="root-container">
+    <h1>Monthly Report</h1>
+    <h2>New users joined in last 30 days: {{new_users_count}}</h2>
+    <h2>Total Requests count: {{total_requests_count}}</h2>
+    <h2>Total Issues count: {{total_issues_count}}</h2>
+    <h2>Top books in last 30 days:</h2>
+    {% for book in top_books %}
+    <p>{{book.title}}</p>
+    {% endfor %}
+</div>
+{% endblock %}

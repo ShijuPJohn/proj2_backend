@@ -58,6 +58,7 @@ def delete_request_by_requestid(user_from_token, rid):
 
 @request_controller.route('/api/user-book-requests', methods=["GET"])
 @validate_token
+@cache.cached(timeout=50)
 def get_user_requests(user_from_token, bid):
     user_requests = [rqs for rqs in user_from_token.requests if rqs.status == "open"]
     if len(user_requests) == 0:
@@ -67,6 +68,7 @@ def get_user_requests(user_from_token, bid):
 
 @request_controller.route('/api/requests', methods=["GET"])
 @validate_token
+@cache.cached(timeout=50)
 def get_all_requests(user_from_token):
     if user_from_token.role == "librarian":
         open_requests = Request.query.filter_by(status='open').all()
@@ -98,6 +100,7 @@ def create_issue(user_from_token):
 
 @request_controller.route('/api/issues', methods=["GET"])
 @validate_token
+@cache.cached(timeout=50)
 def get_user_issues(user_from_token):
     issues = None
     if user_from_token.role == "librarian":
@@ -156,6 +159,7 @@ def create_purchase(user_from_token):
 
 @request_controller.route('/api/purchases', methods=['GET'])
 @validate_token
+@cache.cached(timeout=50)
 def get_all_purchase(user_from_token):
     try:
         if user_from_token.role == "librarian":

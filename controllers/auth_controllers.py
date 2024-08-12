@@ -72,6 +72,7 @@ def api_user_login():
 @user_controller.route('/api/users', methods=['GET'])
 @validate_token
 @check_role
+@cache.cached(timeout=50)
 def get_all_users(user_from_token):
     try:
         users = [user for user in User.query.all() if user != user_from_token]
@@ -83,6 +84,7 @@ def get_all_users(user_from_token):
 
 @user_controller.route('/api/user/', methods=['GET'])
 @validate_token
+@cache.cached(timeout=50)
 def get_user_by_id(user_from_token):
     return jsonify({"user": user_display_schema.dump(user_from_token)}), 200
 
